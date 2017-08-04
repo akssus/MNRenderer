@@ -17,7 +17,7 @@ void VideoBuffer::clearBuffer(sf::Color color = sf::Color::Black)
 }
 void VideoBuffer::drawPixel(int x, int y, sf::Color color)
 {
-	if (x<0 || x>_width || y<0 || y>_height) return; //WTF it makes it sooooo slow shit
+	if (x<0 || x>=_width || y<0 || y>=_height) return; //WTF it makes it sooooo slow shit
 	_image.setPixel(x, y, color);
 }
 void VideoBuffer::swapBuffer(sf::RenderWindow* pWindow)
