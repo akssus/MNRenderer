@@ -1,7 +1,6 @@
 #include <SFML/Graphics.hpp>
 #include <vector>
 #include <gmtl/gmtl.h>
-
 #include <gmtl/Matrix.h>
 #include "VideoBuffer.h"
 
@@ -54,6 +53,24 @@ public:
 	void setViewtransform(gmtl::Matrix44f& matView)
 	{
 		_matWorld = matView;
+	}
+	void lookAt(gmtl::Vec3f origin, gmtl::Vec3f lookat, gmtl::Vec3f up)
+	{
+		gmtl::Matrix44f moveToOrigin = gmtl::makeTrans<gmtl::Matrix44f>(origin);
+
+		gmtl::Vec3f lookVec = lookat - origin;
+		gmtl::normalize(lookVec);
+		gmtl::Vec3f axis = gmtl::makeCross(lookVec, up);
+		gmtl::normalize(axis);
+		up = gmtl::makeCross(lookVec, axis); //adjust up vector
+
+		float eulerAngle = gmtl::Math::aCos(gmtl::dot(lookVec, gmtl::Vec3f(0, 0, 1)));
+		gmtl::AxisAnglef axisAngle(eulerAngle, axis);
+		gmtl::Matrix44f matRotation = gmtl::make<gmtl::Matrix44f>(axisAngle);
+
+		gmtl::Matrix44f matView = moveToOrigin * matRotation;
+
+		_matView = gmtl::invert(matView);
 	}
 
 	void drawVertex(gmtl::Vec3f& vert)
@@ -112,6 +129,23 @@ private:
 		return transformedVert;
 	}
 
+public:
+	void rasterize(gmtl::Vec3f v1, gmtl::Vec3f v2, gmtl::Vec3f v3) //add z-buffer later
+	{
+		const float samplingRate = 100.0f;
+		
+		for (int i = 0; i < samplingRate; ++i)
+		{
+			gmtl::Vec3f v1_v2 = (gmtl::Vec3f(v2 - v1) * (float)i) / samplingRate;
+			for (int j = 0; j < samplingRate; ++j)
+			{
+				gmtl::Vec3f vm_v3 = (gmtl::Vec3f(v3 - v1_v2) * (float)j) / samplingRate;
+				gmtl::Vec3f drawPos = v1 + v1_v2 + vm_v3;
+				_videoBuffer->drawPixel(drawPos.mData[0], drawPos.mData[1], sf::Color::Black);
+			}
+		}
+	}
+
 
 private:
 	VideoBuffer*		_videoBuffer;
@@ -132,15 +166,15 @@ int main()
 	Renderer renderer(RESOLUTION_WIDTH, RESOLUTION_HEIGHT);
 
 	Mesh mesh;
-	mesh._lstVerts.push_back(gmtl::Vec3f(1, -1, 1));
-	mesh._lstVerts.push_back(gmtl::Vec3f(1, -1, -1));
-	mesh._lstVerts.push_back(gmtl::Vec3f(1, 1, 1));
-	mesh._lstVerts.push_back(gmtl::Vec3f(1, 1, -1));
-	mesh._lstVerts.push_back(gmtl::Vec3f(-1, -1, 1));
-	mesh._lstVerts.push_back(gmtl::Vec3f(-1, -1, -1));
-	mesh._lstVerts.push_back(gmtl::Vec3f(-1, 1, 1));
-	mesh._lstVerts.push_back(gmtl::Vec3f(-1, 1, -1));
-	mesh._pos.mData[2] = 1.8f;
+	mesh._lstVerts.push_back(gmtl::Vec3f(10, -10, 10));
+	mesh._lstVerts.push_back(gmtl::Vec3f(10, -10, -10));
+	mesh._lstVerts.push_back(gmtl::Vec3f(10, 10, 10));
+	mesh._lstVerts.push_back(gmtl::Vec3f(10, 10, -10));
+	mesh._lstVerts.push_back(gmtl::Vec3f(-10, -10, 10));
+	mesh._lstVerts.push_back(gmtl::Vec3f(-10, -10, -10));
+	mesh._lstVerts.push_back(gmtl::Vec3f(-10, 10, 10));
+	mesh._lstVerts.push_back(gmtl::Vec3f(-10, 10, -10));
+	mesh._pos.mData[2] = 25.0f;
 
 
 	sf::Clock clock;
@@ -178,11 +212,13 @@ int main()
 			renderer.setWorldTransform(worldTransform);
 
 			//view transform
-			//todo
+			//renderer.lookAt(gmtl::Vec3f(0, 0, 0), gmtl::Vec3f(1, 0, 1), gmtl::Vec3f(0, 0, 1));
 
 			//projection transform
-			renderer.setFrustum(-1, 1, -1, 1, 0.1f, 1.0f);
+			renderer.setFrustum(-5, 5, -5, 5, 1.0f, 10.0f);
 
+
+			renderer.rasterize(gmtl::Vec3f(20, 10, 0), gmtl::Vec3f(80, 20, 0), gmtl::Vec3f(40, 70, 0));
 
 
 			//draw
